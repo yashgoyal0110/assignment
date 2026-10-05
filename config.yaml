@@ -1,0 +1,40 @@
+brand:
+  # Set by src/prepare.py after i inspected brand volumes. The screen_name as it appears in the dataset (author_id for the brand's tweets).
+  name: AmazonHelp
+
+data:
+  raw_dir: data/raw
+  sample_dir: data/sample
+  cache_dir: data/cache
+  # How many of the brand's inbound customer tweets to keep for the working subsample. won't run the full 3M-row file.
+  sample_size: 4000
+  random_seed: 13
+
+models:
+  # Model choice is config-driven so the eval harness can re-run the whole pipeline under different Gemini tiers and report metrics per model.
+  classify: gemini-3.5-flash # cheap, high-volume, structured output
+  draft: gemini-3.8-flash # best flash model, for the grounded reply
+  escalate: gemini-3.5-flash # decision + reason
+  embed: gemini-embedding-001 # retriever (3072-dim)
+  judge: gemini-pro-latest # stronger, different tier than the drafter
+  judge_cross: gemini-3.5-flash-lite # second judge to check self-preference bias
+
+retrieval:
+  top_k: 5
+  # Minimum cosine similarity for a retrieved case to count as useful grounding.
+  min_similarity: 0.55
+
+escalation:
+  # Below this classifier confidence, escalate regardless of intent.
+  min_confidence: 0.60
+  # Below this top retrieval similarity, the brand has no precedent -> escalate.
+  min_grounding_similarity: 0.50
+  # Intents that always go to a human no matter how confident the model is.
+  always_escalate_intents:
+    - legal_or_safety
+    - account_security
+
+eval:
+  golden_path: golden/golden_set.jsonl
+  # Number of judge calls to also score by hand for kappa agreement.
+  human_agreement_n: 40
